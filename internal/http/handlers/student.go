@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/patelaryan0914/students-api/internal/storage"
@@ -20,6 +21,7 @@ func New(storage  storage.Storage) http.HandlerFunc{
 
 		var student types.Student
 		err:= json.NewDecoder(r.Body).Decode(&student)
+		fmt.Print(student)
 		if errors.Is(err,io.EOF){
 			response.WriteJson(w,http.StatusBadRequest,response.GeneralError(fmt.Errorf("empty body")))
 			return 
@@ -43,5 +45,22 @@ func New(storage  storage.Storage) http.HandlerFunc{
 		response.WriteJson(w,http.StatusCreated,map[string]int64{
 			"id":lastId,
 		})
+   }
+}
+func GetByID(storage  storage.Storage) http.HandlerFunc{
+	return func(w http.ResponseWriter, r *http.Request) {
+		id:=r.PathValue("id")
+		slog.Info("Fetching Students",slog.String("id",id))
+		intId, err := strconv.ParseInt(id,10,64)
+		if err!=nil{
+			response.WriteJson(w,http.StatusBadRequest,response.GeneralError(err))
+		}
+		student,err:=storage.GetStudentById(intId)
+		if err!=nil{
+			slog.Error("Error getting User",slog.String("id",id))
+			response.WriteJson(w,http.StatusInternalServerError,response.GeneralError(err))
+			return
+		}
+		response.WriteJson(w,http.StatusOK,student)
    }
 }
